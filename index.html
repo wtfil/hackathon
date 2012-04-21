@@ -6,8 +6,8 @@
     <script type="text/javascript" src="http://ecn.dev.virtualearth.net/mapcontrol/mapcontrol.ashx?v=7.0"></script>
     <script type="text/javascript" src="/jquery.js"></script>
     <script type="text/javascript" src="/map.js"></script>
-		<script src="application.js"></script>
 		<script src="//connect.facebook.net/en_US/all.js"></script>
+		<script src="application.js"></script>
 		<script>
 			FB.init({
 				appId      : '403886702969818',
@@ -27,6 +27,7 @@
 					console.log('User cancelled login or did not fully authorize.');
 				}
 			});	
+			var friday = new APP();
 		</script>
     <div id="SDKmap"></div>
 	</body>
