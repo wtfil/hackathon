@@ -3,7 +3,7 @@ var UsersEvents = (function(){
 		var self = this;
 	}
 	usersEvents.prototype = {
-		getFriendsEvents: function(){
+		getFriendsEvents: function(callback){
 			var self = this;
 			FB.api({
 				method: 'fql.query',
@@ -11,26 +11,28 @@ var UsersEvents = (function(){
 								'(SELECT uid2 FROM friend WHERE uid1=me())'
 			},
 			function(response) {
-				self.getFullEvents(response);
+				self.getFullEvents(response, callback);
 			});
 		},
-		getFullEvents: function(data){
+		getFullEvents: function(data, callback){
 			var self = this;
 			var res = {};
 			var events = [];
+			var count = 0;
 			Object.keys(data).forEach(function(key){
 				var event = data[key];
 				var eid = event.eid;
 				res[eid] || (res[eid] = []);
-				res[eid].push(event.uid)
+				res[eid].push(event.uid);
 			});
 			Object.keys(res).forEach(function(key){
-				var event = {};
-				event.users = res[key];
-				events.push(event);
-				event = self.getEventDetail(key)
+				self.getEventDetail(key, function(obj){
+					var data = {users: res[key]};
+					jQuery.extend(data, obj[0]);
+					events.push(data);
+					if((Object.keys(res).length == ++count) && callback) callback(events);
+				});
 			});
-			console.log(events);
 		},
 		getEventDetail: function(eid, callback){
 			var self = this;
@@ -39,10 +41,7 @@ var UsersEvents = (function(){
 				query: 'SELECT eid, name, pic_small, pic_big, pic_square, pic, '+
 								'description, start_time, end_time, location, venue, privacy '+
 								'FROM event WHERE eid ='+eid+';',
-			},
-			function(response) {
-				if(callback) callback();
-			});
+			},callback);
 		},
 	}
 	return new usersEvents();
