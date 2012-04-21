@@ -21,12 +21,20 @@ var APP = function(){
 			//		console.log(response);
 			//	}
 			//);
+      self.getAllData(function (data) {
+        self.showBestOnMap(data);
+      });  
 		});
 	}
 	app.prototype = {
 		conf:{
 			appId      : '403886702969818',
 			channelUrl : 'http://friday.incubus.univ.kiev.ua/index.html',
+      templates: {
+        placemark: '<div class="placemark"><h4>{name}</h4><img src="{pic_small}"/></div><div class="placemark-tail"></div>',
+        balloon: '<div class="balloon"><h4>{name}</h4><img src="{pic_big}"/></div><div class="placemark-tail"></div>',
+        me: '<img src="http://graph.facebook.com/{id}/picture">'
+      }
 		},
 		init: function(callback){
 			var self = this;
@@ -55,34 +63,124 @@ var APP = function(){
 					});
 				}
 			 });
-		}
+		},
+    template: function (name, options) {
+      var self = this,
+        st = self.conf.templates[name];
+      Object.keys(options || {}).forEach(function (key) {
+        if (typeof options[key] !== 'string') {
+          return;
+        }
+        st = st.replace(new RegExp('{' + key + '}', 'g'), options[key]);
+      });
+      return st;
+    },
+    getAllData: function (callback) {
+      var data = {
+        events: [
+          {name: 'metallica', pic_small: 'http://profile.ak.fbcdn.net/hprofile-ak-snc4/373005_173676372738073_345025705_n.jpg', location: {latitude: 50.455, longitude: 30.52}, pic_big: 'http://icons.iconseeker.com/png/fullsize/smurf-houses/smurf-house-exterior.png'},
+          {name: 'metallica', pic_small: 'http://profile.ak.fbcdn.net/hprofile-ak-snc4/373005_173676372738073_345025705_n.jpg', location: {latitude: 50.465, longitude: 30.52}}
+        ]
+      };
+      setTimeout(function () {
+        callback(data);
+      }, 300)
+    },
+    showMeOnMap: function () {
+      var self = this,
+        placemark = self.template('me', { id: self.uid });
+      Map.placemark(null, placemark);
+    },
+    showBestOnMap: function (data) {
+      var self = this,
+        placemark,
+        balloon = 'qq';
+      data.events.forEach(function (event) {
+        placemark = self.template('placemark', event);
+        balloon = self.template('balloon', event);
+        Map.placemark(event.location, placemark, balloon);
+      });
+    }
 	}
-	var checkiList = function(sw,ne){
+	var checkiList = function(){
 		var self = this;
-		//self.getFriendsCheckins(sw,ne);
-		self.current();
+		self.list = {};
+		//self.getPostsFromWall(function(list){
+		//	console.log(list);
+		//});
+		self.getFriendsCheckins(function(list){
+			console.log(list.length);
+		});
+		return self;
 	}
 	checkiList.prototype = {
-		getFriendsCheckins: function(sw,ne) {
-				var queryBase = "SELECT author_uid, page_id, tagged_uids, post_id, coords, timestamp, message FROM checkin WHERE (author_uid in (select uid2 from friend where uid1=me())) AND coords.latitude > 'sw[0]' AND coords.latitude < ne[0] AND coords.longitude > 'sw[1]' AND coords.longitude < ne[1] ORDER BY timestamp DESC"
-			var query = queryBase.replace("sw[0]", sw[0], "gi").replace("sw[1]", sw[1], "gi").replace("ne[0]", ne[0], "gi").replace("ne[1]", ne[1], "gi");
-			FB.api(
-				{
-					method: 'fql.query',
-					query: query
-					//query: 'SELECT name FROM user WHERE uid=me()'
-				},
-				function(response) {
-					return response;
-				}
-			);
+		config:{
+			dx:10,
+			dy:10
+			//dx:0.4,
+			//dy:0.3
 		},
-		current: function(){
+		getPostsFromWall: function(callback) {
+			var self = this;
+			self.current(function(currentCoords){
+				var sw = [];
+				var ne = [];
+				sw.push(currentCoords[0] - self.config.dy)
+				sw.push(currentCoords[1] - self.config.dx)
+				ne.push(currentCoords[0] + self.config.dy)
+				ne.push(currentCoords[1] + self.config.dx)
+				var queryBase = "SELECT message,comments,attachment FROM stream WHERE post_id IN (SELECT author_uid, page_id, tagged_uids, post_id," + 
+				" coords, timestamp, message FROM checkin WHERE (author_uid in (select"+
+				" uid2 from friend where uid1=me())) AND coords.latitude > 'sw[0]' AND"+
+				" coords.latitude < 'ne[0]' AND coords.longitude > 'sw[1]' AND"+
+				" coords.longitude < 'ne[1]' ORDER BY timestamp DESC)"
+				var query = queryBase.replace("sw[0]", sw[0], "gi").replace("sw[1]", sw[1], "gi").replace("ne[0]", ne[0], "gi").replace("ne[1]", ne[1], "gi");
+				FB.api(
+					{
+						method: 'fql.query',
+						query: query
+					},
+					function(response) {
+						self.list = response;
+						callback(self.list);
+					}
+				);
+			});
+		},
+		getFriendsCheckins: function(callback) {
+			var self = this;
+			self.current(function(currentCoords){
+				var sw = [];
+				var ne = [];
+				sw.push(currentCoords[0] - self.config.dy)
+				sw.push(currentCoords[1] - self.config.dx)
+				ne.push(currentCoords[0] + self.config.dy)
+				ne.push(currentCoords[1] + self.config.dx)
+				var queryBase = "SELECT author_uid, page_id, tagged_uids, post_id," + 
+				" coords, timestamp, message FROM checkin WHERE (author_uid in (select"+
+				" uid2 from friend where uid1=me())) AND coords.latitude > 'sw[0]' AND"+
+				" coords.latitude < 'ne[0]' AND coords.longitude > 'sw[1]' AND"+
+				" coords.longitude < 'ne[1]' ORDER BY timestamp DESC"
+				var query = queryBase.replace("sw[0]", sw[0], "gi").replace("sw[1]", sw[1], "gi").replace("ne[0]", ne[0], "gi").replace("ne[1]", ne[1], "gi");
+				FB.api(
+					{
+						method: 'fql.query',
+						query: query
+					},
+					function(response) {
+						self.list = response;
+						callback(self.list);
+					}
+				);
+			});
+		},
+		current: function(callback){
 			var error = function(msg){
 				console.log(msg);
 			}
 			var success = function(position){
-				return ([position.coords.latitude, position.coords.longitude]);
+				console.log(typeof callback);
+				callback([position.coords.latitude, position.coords.longitude]);
 			}
 			if (navigator.geolocation) {
 			  var location = navigator.geolocation.getCurrentPosition(success, error);

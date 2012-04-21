@@ -1,0 +1,27 @@
+.placemark {
+  background: white;
+  padding: 5px;
+  -moz-box-shadow:    4px 2px 3px #aaa;
+  -webkit-box-shadow: 4px 2px 3px #aaa;
+  box-shadow:         4px 2px 3px #aaa;
+}
+.placemark h4 {
+  margin: 0;
+}
+.placemark img {
+  max-width: 64px;
+  max-height: 64px;
+}
+.balloon img {
+  max-width: 128;
+  max-height: 128;
+}
+.placemark-tail {
+  margin-left: 10px;
+  height: 0px;
+  width: 0px;
+  border-width: 0 0 20px 20px;
+  border-color: transparent white;
+  border-style: solid;
+}
+
