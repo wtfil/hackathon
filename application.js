@@ -5,6 +5,7 @@ var APP = function(){
 		self.uid;
 		self.init(function(){
 			console.log(self.accessToken);
+			UsersEvents.getFriendsEvents();
 		});
 	}
 	app.prototype = {
