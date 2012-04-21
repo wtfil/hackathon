@@ -4,6 +4,23 @@ var APP = function(){
 		self.accessToken;
 		self.uid;
 		self.init(function(){
+			console.log(self.accessToken);
+			var events;
+			UsersEvents.getFriendsEvents(function(response){
+				events = response;
+			});
+			var myCheckiList = new checkiList([-90,-180], [90,180]);
+			//FB.api(
+			//	{
+			//		method: 'fql.query',
+			//		query: "SELECT author_uid, page_id, tagged_uids, post_id, coords, timestamp, message FROM checkin WHERE (author_uid in (select uid2 from friend where uid1=me())) AND coords.latitude > '-90' AND coords.latitude < 90 AND coords.longitude > '-180' AND coords.longitude < 180 ORDER BY timestamp DESC"
+			//		//query: 'SELECT author_uid, page_id, tagged_uids, post_id, coords, timestamp, message FROM checkin WHERE ( author_uid in (select uid2 from friend where uid1=me()) ) AND coords.latitude > -90 AND coords.latitude < 90 AND coords.longitude > 180 AND coords.lontitude < 180 ORDER BY timestamp DESC'
+			//		//query: 'SELECT name FROM user WHERE uid=me()'
+			//	},
+			//	function(response) {
+			//		console.log(response);
+			//	}
+			//);
       self.getAllData(function (data) {
         self.showBestOnMap(data);
       });  
