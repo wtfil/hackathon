@@ -55,7 +55,7 @@ var UsersEvents = (function(){
 			Object.keys(res).forEach(function(key){
 				self.getEventDetail(key, currentCoords, function(obj){
 					var data = {users: res[key]};
-					if(!self.isEmpty(obj)){
+					if(!self.isEmpty(obj) && data.users.length > 1){
 						jQuery.extend(data, obj[0]);
 						events.push(data);
 					}
