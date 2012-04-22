@@ -248,8 +248,8 @@ var APP = function(){
 	}
 	CheckiList.prototype = {
 		config:{
-			dx:10,
-			dy:10,
+			dx:1,
+			dy:1,
 			minLength:3
 		},
 		getFrindLists: function(){
