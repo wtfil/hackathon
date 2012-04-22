@@ -10,11 +10,7 @@ var Map = (function () {
         var coords = position.coords,
           lat = coords.latitude,
           lng = coords.longitude;
-        self._map.setView({ zoom: 14, center: new Microsoft.Maps.Location(lat, lng) });
-        FB.api('/me', function (me) {
-          var  icon = 'http://graph.facebook.com/' + me.id + '/picture';
-          self.placemark(coords, '<img src="' + icon + '"/>', '<div>oloasdsd</br>qoadj<br></div>');
-        })
+        self._map.setView({ zoom: 13, center: new Microsoft.Maps.Location(lat, lng) });
       });
     });
   };
@@ -26,6 +22,7 @@ var Map = (function () {
     },
     placemark: function (coords, placemarkHTML, balloonHTML) {
       coords = coords || this._map.getCenter();
+      balloonHTML = balloonHTML || '';
       var placemark = new Microsoft.Maps.Infobox(coords, {});
       var balloon = new Microsoft.Maps.Infobox(coords, {
         visible: false

@@ -5,24 +5,25 @@ var APP = function(){
 		self.uid;
 		self.init(function(){
 			console.log(self.accessToken);
-			var myCheckiList = new checkiList([-90,-180], [90,180]);
-			//FB.api(
-			//	{
-			//		method: 'fql.query',
-			//		query: "SELECT author_uid, page_id, tagged_uids, post_id, coords, timestamp, message FROM checkin WHERE (author_uid in (select uid2 from friend where uid1=me())) AND coords.latitude > '-90' AND coords.latitude < 90 AND coords.longitude > '-180' AND coords.longitude < 180 ORDER BY timestamp DESC"
-			//		//query: 'SELECT author_uid, page_id, tagged_uids, post_id, coords, timestamp, message FROM checkin WHERE ( author_uid in (select uid2 from friend where uid1=me()) ) AND coords.latitude > -90 AND coords.latitude < 90 AND coords.longitude > 180 AND coords.lontitude < 180 ORDER BY timestamp DESC'
-			//		//query: 'SELECT name FROM user WHERE uid=me()'
-			//	},
-			//	function(response) {
-			//		console.log(response);
-			//	}
-			//);
+			var events;
+			UsersEvents.getFriendsEvents(function(response){
+				events = response;
+			});
+			var myCheckiList = new checkiList();
+      self.getAllData(function (data) {
+        self.showBestOnMap(data);
+      });  
 		});
 	}
 	app.prototype = {
 		conf:{
 			appId      : '403886702969818',
 			channelUrl : 'http://friday.incubus.univ.kiev.ua/index.html',
+      templates: {
+        placemark: '<div class="placemark"><h4>{name}</h4><img src="{pic_small}"/></div><div class="placemark-tail"></div>',
+        balloon: '<div class="balloon"><h4>{name}</h4><img src="{pic_big}"/></div><div class="placemark-tail"></div>',
+        me: '<img src="http://graph.facebook.com/{id}/picture">'
+      }
 		},
 		init: function(callback){
 			var self = this;
@@ -51,7 +52,44 @@ var APP = function(){
 					});
 				}
 			 });
-		}
+		},
+    template: function (name, options) {
+      var self = this,
+        st = self.conf.templates[name];
+      Object.keys(options || {}).forEach(function (key) {
+        if (typeof options[key] !== 'string') {
+          return;
+        }
+        st = st.replace(new RegExp('{' + key + '}', 'g'), options[key]);
+      });
+      return st;
+    },
+    getAllData: function (callback) {
+      var data = {
+        events: [
+          {name: 'metallica', pic_small: 'http://profile.ak.fbcdn.net/hprofile-ak-snc4/373005_173676372738073_345025705_n.jpg', location: {latitude: 50.455, longitude: 30.52}, pic_big: 'http://icons.iconseeker.com/png/fullsize/smurf-houses/smurf-house-exterior.png'},
+          {name: 'metallica', pic_small: 'http://profile.ak.fbcdn.net/hprofile-ak-snc4/373005_173676372738073_345025705_n.jpg', location: {latitude: 50.465, longitude: 30.52}}
+        ]
+      };
+      setTimeout(function () {
+        callback(data);
+      }, 300)
+    },
+    showMeOnMap: function () {
+      var self = this,
+        placemark = self.template('me', { id: self.uid });
+      Map.placemark(null, placemark);
+    },
+    showBestOnMap: function (data) {
+      var self = this,
+        placemark,
+        balloon = 'qq';
+      data.events.forEach(function (event) {
+        placemark = self.template('placemark', event);
+        balloon = self.template('balloon', event);
+        Map.placemark(event.location, placemark, balloon);
+      });
+    }
 	}
 	var checkiList = function(){
 		var self = this;
