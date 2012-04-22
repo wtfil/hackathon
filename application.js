@@ -42,6 +42,7 @@ var APP = function(){
         checkin: 
           '<div class="placemark">' +
             '<h4>{name}</h4>' +
+            '<div><div class="pseudo">{userCount} friends were here</div></div>' +
           '</div>' +
           '<div class="placemark-tail"><div></div></div>',
         me: '<img src="http://graph.facebook.com/{id}/picture">'
@@ -172,6 +173,11 @@ var APP = function(){
       });
       console.log(data.checkins);
       data.checkins.placesList.forEach(function (place) {
+				console.log(place.uids.length);
+				place.userCount = place.uids.length;
+        place.friends = place.uids.map(function (id) {
+          return self.template('user', {id: id});
+        }).join('');
         var coords = {
           latitude: place.latitude,
           longitude: place.longitude
@@ -203,6 +209,25 @@ var APP = function(){
 				});
 				var mergeResult = self.mergeResult(checkinsList.concat(imagesList), self.config.minLength);
 				self.getPlaces(mergeResult, function(placesList){
+					placesList.forEach(function(elem){
+						for(var key in mergeResult){
+							if(elem.page_id === key){
+								mergeResult[key].forEach(function(item){
+									if(item.type === 'photo'){
+										if(elem.uids.indexOf(item.obj.owner) === -1){
+											elem.uids.push(item.obj.owner); 
+										}
+									}
+									if(item.type === 'checkin'){
+										if(elem.uids.indexOf(item.obj.author_uid) === -1){
+											elem.uids.push(item.obj.author_uid); 
+										}
+									}
+								});
+							}
+						}
+						console.log(placesList);
+					});
           callback({
             mergeResult: mergeResult,
             placesList: placesList
@@ -239,6 +264,9 @@ var APP = function(){
 					query: self.buildPlacesQuery(idsArray)
 				},
 				function(response) {
+					response.forEach(function(elem){
+						elem.uids = [];
+					});
 					callback(response);
 				}
 			);
