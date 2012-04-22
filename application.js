@@ -5,6 +5,7 @@ var APP = function(){
 		self.uid;
 		self.init(function(){
       self.getAllData(function (data) {
+        jQuery('#load').hide();
         self.showBestOnMap(data);
       });  
 		});
@@ -90,8 +91,9 @@ var APP = function(){
 				allData.events = response;
         if (++callbackCounter === 2) callback(allData);
 			});
-      CheckiList.getFriendsCheckins(function (checkins) {
-        allData.checkins = checkins;
+			new CheckiList(function (data) {
+        console.log(data);
+        data.checkins = data;
         if (++callbackCounter === 2) callback(allData);
       });
     },
@@ -160,114 +162,149 @@ var APP = function(){
       //});
     }
 	}
-  var CheckiList = (function () {
-	  var checkiList = function(){
-	  	var self = this;
-	  	self.list = {};
-	  	return self;
-	  }
-	  checkiList.prototype = {
-	  	config:{
-	  		dx:10,
-	  		dy:10
-	  	},
-      _mergeByCoordinates: function (raw) {
-        var result = {},
-          accuracy = 0.002 * 0.002,
-          i, j,
-          first,
-          diff,
-          anyChanges = false,
-          second;
-        for (i = 0; i < raw.length; i++) {
-          raw[i].group = raw[i].group || i;
-        }
-        for (i = 0; i < raw.length - 1; i++) {
-          first = raw[i];
-          for (j = i + 1; j < raw.length; j++) {
-            second = raw[j];
-            diff = Math.pow(first.coords.latitude - second.coords.latitude, 2) +
-              Math.pow(first.coords.longitude - second.coords.longitude, 2);
-            if (diff < accuracy && first.group !== second.group) {
-              second.group = first.group;
-              anyChanges = true;
-            }
-          }
-        }
-        if (anyChanges) {
-          return this.mergeByCoordinates(raw);
-        }
-        return raw;
-      },
-	  	getPostsFromWall: function(callback) {
-	  		var self = this;
-	  		self.current(function(currentCoords){
-	  			var sw = [];
-	  			var ne = [];
-	  			sw.push(currentCoords[0] - self.config.dy)
-	  			sw.push(currentCoords[1] - self.config.dx)
-	  			ne.push(currentCoords[0] + self.config.dy)
-	  			ne.push(currentCoords[1] + self.config.dx)
-	  			var queryBase = "SELECT message,comments,attachment FROM stream WHERE post_id IN (SELECT author_uid, page_id, tagged_uids, post_id," + 
-	  			" coords, timestamp, message FROM checkin WHERE (author_uid in (select"+
-	  			" uid2 from friend where uid1=me())) AND coords.latitude > 'sw[0]' AND"+
-	  			" coords.latitude < 'ne[0]' AND coords.longitude > 'sw[1]' AND"+
-	  			" coords.longitude < 'ne[1]' ORDER BY timestamp DESC)"
-	  			var query = queryBase.replace("sw[0]", sw[0], "gi").replace("sw[1]", sw[1], "gi").replace("ne[0]", ne[0], "gi").replace("ne[1]", ne[1], "gi");
-	  			FB.api(
-	  				{
-	  					method: 'fql.query',
-	  					query: query
-	  				},
-	  				function(response) {
-	  					self.list = response;
-	  					callback(self.list);
-	  				}
-	  			);
-	  		});
-	  	},
-	  	getFriendsCheckins: function(callback) {
-	  		var self = this;
-	  		self.current(function(currentCoords){
-	  			var sw = [];
-	  			var ne = [];
-	  			sw.push(currentCoords[0] - self.config.dy)
-	  			sw.push(currentCoords[1] - self.config.dx)
-	  			ne.push(currentCoords[0] + self.config.dy)
-	  			ne.push(currentCoords[1] + self.config.dx)
-	  			var queryBase = "SELECT author_uid, page_id, tagged_uids, post_id," + 
-	  			" coords, timestamp, message FROM checkin WHERE (author_uid in (select"+
-	  			" uid2 from friend where uid1=me())) AND coords.latitude > 'sw[0]' AND"+
-	  			" coords.latitude < 'ne[0]' AND coords.longitude > 'sw[1]' AND"+
-	  			" coords.longitude < 'ne[1]' ORDER BY timestamp DESC"
-	  			var query = queryBase.replace("sw[0]", sw[0], "gi").replace("sw[1]", sw[1], "gi").replace("ne[0]", ne[0], "gi").replace("ne[1]", ne[1], "gi");
-	  			FB.api(
-	  				{
-	  					method: 'fql.query',
-	  					query: query
-	  				},
-	  				function(response) {
-	  					self.list = response;
-	  					callback(self.list);
-	  				}
-	  			);
-	  		});
-	  	},
-	  	current: function(callback){
-	  		var error = function(msg){
-	  			console.log(msg);
-	  		}
-	  		var success = function(position){
-	  			callback([position.coords.latitude, position.coords.longitude]);
-	  		}
-	  		if (navigator.geolocation) {
-	  		  var location = navigator.geolocation.getCurrentPosition(success, error);
-	  		} else {
-    			error('not supported');
-	  		}
-	  	}
-	  }
-    return new checkiList();
-  })();
+	var CheckiList = function(callback){
+		var self = this;
+		var pagesList = [];
+		self.list = {};
+		self.getImages(function(imagesList){
+			self.getCheckins(function(checkinsList){
+				imagesList.forEach(function(image){
+					if(pagesList.indexOf(image.place_id === -1)){
+						pagesList.push(image.place_id);
+					}
+				});
+				checkinsList.forEach(function(checkin){
+					if(pagesList.indexOf(checkin.page_id === -1)){
+						pagesList.push(checkin.page_id);
+					}
+				});
+				var mergeResult = self.mergeResult(checkinsList.concat(imagesList), self.config.minLength);
+				self.getPlaces(mergeResult, function(placesList){
+          callback({
+            mergeResult: mergeResult,
+            placesList: placesList
+          });
+				});
+			});
+		});
+		return self;
+	}
+	CheckiList.prototype = {
+		config:{
+			dx:10,
+			dy:10,
+			minLength:2
+			//dx:0.4,
+			//dy:0.3
+		},
+		getFrindLists: function(){
+			var self = this;
+			FB.api(
+				{
+					method: 'fql.query',
+					query: "SELECT flid, owner, name FROM friendlist WHERE owner=me()"
+				},
+				function(response) {
+					console.log( response);
+				}
+			)
+		},
+		getPlaces: function(target, callback){
+			var self = this;
+			var idsArray = Object.keys(target);
+			FB.api(
+				{
+					method: 'fql.query',
+					query: self.buildPlacesQuery(idsArray)
+				},
+				function(response) {
+					callback(response);
+				}
+			);
+		},
+		mergeResult:function(arr, minLength) {
+			var res = {};
+			arr.forEach(function(e) {
+				if (typeof e.page_id === "undefined") {
+						//photo
+						if (!(e.place_id in res)) {
+								res[e.place_id] = [];
+						}
+						res[e.place_id].push({
+								type: "photo",
+								obj: e
+						});
+				};
+				if (typeof e.place_id === "undefined") {
+					if (!(e.page_id in res)) {
+						res[e.page_id] = [];
+					}
+					res[e.page_id].push({
+						type: "checkin",
+						obj: e
+					});
+				}
+			});
+			var finalRes = {};
+			for(var key in res){
+				if (res[key].length >= minLength){
+					finalRes[key] = res[key];
+				}
+			}
+			return finalRes;
+		},
+		buildPlacesQuery:function(placesIdArray) {
+			var queryPart = "SELECT page_id, name, description, latitude, longitude, display_subtext FROM place";
+			var subs = placesIdArray.map(function(el) {
+					return "page_id = " + el;
+			});
+    	return queryPart + " WHERE " + subs.join(" OR ");
+		},
+		getCheckins: function(callback) {
+			var self = this;
+			var locationQuery = "(SELECT id FROM location_post WHERE (author_uid = me() OR author_uid IN (select uid2 from friend where uid1=me())) ORDER BY timestamp DESC)";
+			var queryBase = "SELECT page_id,timestamp,tagged_uids,message,author_uid FROM checkin WHERE checkin_id IN " + locationQuery; 
+			self.current(function(currentCoords){
+				FB.api(
+					{
+						method: 'fql.query',
+						query: queryBase
+					},
+					function(response) {
+						callback(response);
+					}
+				);
+			});
+		},
+		getImages: function(callback) {
+			var self = this;
+			var locationQuery = "(SELECT id FROM location_post WHERE (author_uid = me() OR author_uid IN (select uid2 from friend where uid1=me())) ORDER BY timestamp DESC)";
+			var queryBase = "SELECT src,owner,caption, place_id FROM photo WHERE object_id in " + locationQuery; 
+			self.current(function(currentCoords){
+				FB.api(
+					{
+						method: 'fql.query',
+						query: queryBase
+					},
+					function(response) {
+						callback(response);
+					}
+				);
+			});
+		},
+		current: function(callback){
+			var error = function(msg){
+				console.log(msg);
+			}
+			var success = function(position){
+				callback([position.coords.latitude, position.coords.longitude]);
+			}
+			if (navigator.geolocation) {
+			  var location = navigator.geolocation.getCurrentPosition(success, error);
+			} else {
+  			error('not supported');
+			}
+		}
+	}
 	return new app();
 }

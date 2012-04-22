@@ -1,18 +1,8 @@
 var Map = (function () {
   var init = function () {
     var self = this;
+    self.init();
     self._elements = [];
-    $(function () {
-      self._map = new Microsoft.Maps.Map(document.getElementById('SDKmap'), {
-        credentials: 'AkAEe_tANwHMtwNNMIreEa-9lwXMleCnCHFAj5PkK6ShRVQvmjJh8ihqQE2mtZ0f'
-      });
-      navigator.geolocation.getCurrentPosition(function (position) {
-        var coords = position.coords,
-          lat = coords.latitude,
-          lng = coords.longitude;
-        self._map.setView({ zoom: 13, center: new Microsoft.Maps.Location(lat, lng) });
-      });
-    });
   };
   init.prototype = {
     _hideBalloons: function () {
@@ -20,6 +10,20 @@ var Map = (function () {
         e.balloon.setOptions({ visible: false });
         e.placemark.setOptions({ visible: true });
       })
+    },
+    init: function () {
+      var self = this;
+      $(function () {
+        self._map = new Microsoft.Maps.Map(document.getElementById('SDKmap'), {
+          credentials: 'AkAEe_tANwHMtwNNMIreEa-9lwXMleCnCHFAj5PkK6ShRVQvmjJh8ihqQE2mtZ0f'
+        });
+        navigator.geolocation.getCurrentPosition(function (position) {
+          var coords = position.coords,
+            lat = coords.latitude,
+            lng = coords.longitude;
+          self._map.setView({ zoom: 13, center: new Microsoft.Maps.Location(lat, lng) });
+        });
+      });
     },
     placemark: function (coords, placemarkHTML, balloonHTML) {
       coords = coords || this._map.getCenter();
