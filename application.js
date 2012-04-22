@@ -8,6 +8,8 @@ var APP = function(){
 			var events;
 			UsersEvents.getFriendsEvents(function(response){
 				events = response;
+				console.log(events);
+				//UsersEvents.getEventsByTime(response, 6);
 			});
 			var myCheckiList = new checkiList([-90,-180], [90,180]);
 			//FB.api(
