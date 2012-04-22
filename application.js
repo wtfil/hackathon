@@ -92,10 +92,12 @@ var APP = function(){
 			UsersEvents.getFriendsEvents(function(response){
 				allData.events = response;
         if (++callbackCounter === 2) callback(allData);
+				console.log('first');
 			});
 			new CheckiList(function (data) {
         allData.checkins = data;
         if (++callbackCounter === 2) callback(allData);
+				console.log('second');
       });
     },
     showMeOnMap: function () {
