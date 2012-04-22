@@ -4,26 +4,8 @@ var APP = function(){
 		self.accessToken;
 		self.uid;
 		self.init(function(){
-			console.log(self.accessToken);
-			var events;
-			UsersEvents.getFriendsEvents(function(response){
-				events = response;
-				console.log(events);
-				//UsersEvents.getEventsByTime(response, 6);
-			});
-			var myCheckiList = new checkiList([-90,-180], [90,180]);
-			//FB.api(
-			//	{
-			//		method: 'fql.query',
-			//		query: "SELECT author_uid, page_id, tagged_uids, post_id, coords, timestamp, message FROM checkin WHERE (author_uid in (select uid2 from friend where uid1=me())) AND coords.latitude > '-90' AND coords.latitude < 90 AND coords.longitude > '-180' AND coords.longitude < 180 ORDER BY timestamp DESC"
-			//		//query: 'SELECT author_uid, page_id, tagged_uids, post_id, coords, timestamp, message FROM checkin WHERE ( author_uid in (select uid2 from friend where uid1=me()) ) AND coords.latitude > -90 AND coords.latitude < 90 AND coords.longitude > 180 AND coords.lontitude < 180 ORDER BY timestamp DESC'
-			//		//query: 'SELECT name FROM user WHERE uid=me()'
-			//	},
-			//	function(response) {
-			//		console.log(response);
-			//	}
-			//);
       self.getAllData(function (data) {
+        jQuery('#load').hide();
         self.showBestOnMap(data);
       });  
 		});
@@ -33,8 +15,33 @@ var APP = function(){
 			appId      : '403886702969818',
 			channelUrl : 'http://friday.incubus.univ.kiev.ua/index.html',
       templates: {
-        placemark: '<div class="placemark"><h4>{name}</h4><img src="{pic_small}"/></div><div class="placemark-tail"></div>',
-        balloon: '<div class="balloon"><h4>{name}</h4><img src="{pic_big}"/></div><div class="placemark-tail"></div>',
+        user: 
+          '<a target="_blank" class="user" href="http://facebook.com/profile.php?id={id}">' +
+            '<img src="http://graph.facebook.com/{id}/picture">' +
+          '</a>',
+        placemark: 
+          '<div class="placemark">' + 
+            '<h4>{name}</h4>' + 
+            '<div>{startTime}</div>' +
+            '<div><div class="pseudo">{userCount} friends will going</div></div>' +
+          '</div>' +
+          '<div class="placemark-tail"><div></div></div>',
+        balloon:
+          '<div class="placemark balloon">' + 
+            '<h4>{name}</h4>' +
+            '<div class="content col-left">' +
+              '<p>{description}</p>' +
+              '<div>{friends}</div>' +
+            '</div>' +
+            '<div class="content col-right">' +
+              '<img src="{pic_big}"/>' +
+            '</div>' +
+          '</div>' + 
+          '<div class="placemark-tail"><div></div></div>',
+        checkin: 
+          '<div class="placemark">' +
+            '<h4>{message}</h4>' +
+          '</div>',
         me: '<img src="http://graph.facebook.com/{id}/picture">'
       }
 		},
@@ -70,7 +77,7 @@ var APP = function(){
       var self = this,
         st = self.conf.templates[name];
       Object.keys(options || {}).forEach(function (key) {
-        if (typeof options[key] !== 'string') {
+        if (typeof options[key] !== 'string' && typeof options[key] !== 'number') {
           return;
         }
         st = st.replace(new RegExp('{' + key + '}', 'g'), options[key]);
@@ -78,51 +85,180 @@ var APP = function(){
       return st;
     },
     getAllData: function (callback) {
-      var data = {
-        events: [
-          {name: 'metallica', pic_small: 'http://profile.ak.fbcdn.net/hprofile-ak-snc4/373005_173676372738073_345025705_n.jpg', location: {latitude: 50.455, longitude: 30.52}, pic_big: 'http://icons.iconseeker.com/png/fullsize/smurf-houses/smurf-house-exterior.png'},
-          {name: 'metallica', pic_small: 'http://profile.ak.fbcdn.net/hprofile-ak-snc4/373005_173676372738073_345025705_n.jpg', location: {latitude: 50.465, longitude: 30.52}}
-        ]
-      };
-      setTimeout(function () {
-        callback(data);
-      }, 300)
+      var allData = {},
+        callbackCounter = 0;
+			UsersEvents.getFriendsEvents(function(response){
+				allData.events = response;
+        if (++callbackCounter === 2) callback(allData);
+			});
+			new CheckiList(function (data) {
+        console.log(data);
+        data.checkins = data;
+        if (++callbackCounter === 2) callback(allData);
+      });
     },
     showMeOnMap: function () {
       var self = this,
         placemark = self.template('me', { id: self.uid });
       Map.placemark(null, placemark);
     },
+    convertDate: function (timestamp) {
+      var d = new Date(timestamp * 1000),
+        day = ['Sunday',
+          'Monday',
+          'Tuesday',
+          'Wednesday',
+          'Thursday',
+          'Friday',
+          'Saturday'
+        ][d.getDay()],
+        month = [
+          'Jan',
+          'Feb',
+          'Mar',
+          'Apr',
+          'May',
+          'Jun',
+          'Jul',
+          'Aug',
+          'Sep',
+          'Oct',
+          'Nov',
+          'Dec'
+        ][d.getMonth()],
+        hours = d.getHours(),
+        minutes = d.getMinutes();
+      hours = hours < 10 ? ('0' + hours) : hours;
+      minutes = minutes < 10 ? ('0' + minutes) : minutes;
+      return [day, d.getDate(), month, hours + ':' + minutes].join(' ');
+    },
+    convertDescription: function (description) {
+      var self = this;
+      var temp = jQuery(self.template('balloon', {description: description}))
+        .find('p');
+      return description;
+    },
     showBestOnMap: function (data) {
       var self = this,
         placemark,
         balloon = 'qq';
       data.events.forEach(function (event) {
+        var d = new Date(event.start_time);
+        event.userCount = event.users.length;
+        event.startTime = self.convertDate(event.start_time);
+        event.description = self.convertDescription(event.description);
+        event.friends = event.users.map(function (id) {
+          return self.template('user', {id: id});
+        }).join('');
+        //console.log(event)
         placemark = self.template('placemark', event);
         balloon = self.template('balloon', event);
-        Map.placemark(event.location, placemark, balloon);
+        Map.placemark(event.venue, placemark, balloon);
       });
+      //data.checkins.forEach(function (checkin) {
+      //  placemark = self.template('checkin', checkin);
+      //  balloon = self.template('balloon', checkin);
+      //  Map.placemark(checkin.coords, placemark, balloon);
+      //});
     }
 	}
-	var checkiList = function(){
+	var CheckiList = function(callback){
 		var self = this;
+		var pagesList = [];
 		self.list = {};
-		//self.getPostsFromWall(function(list){
-		//	console.log(list);
-		//});
-		self.getFriendsCheckins(function(list){
-			console.log(list.length);
+		self.getImages(function(imagesList){
+			self.getCheckins(function(checkinsList){
+				imagesList.forEach(function(image){
+					if(pagesList.indexOf(image.place_id === -1)){
+						pagesList.push(image.place_id);
+					}
+				});
+				checkinsList.forEach(function(checkin){
+					if(pagesList.indexOf(checkin.page_id === -1)){
+						pagesList.push(checkin.page_id);
+					}
+				});
+				var mergeResult = self.mergeResult(checkinsList.concat(imagesList), self.config.minLength);
+				self.getPlaces(mergeResult, function(placesList){
+          callback({
+            mergeResult: mergeResult,
+            placesList: placesList
+          });
+				});
+			});
 		});
 		return self;
 	}
-	checkiList.prototype = {
+	CheckiList.prototype = {
 		config:{
 			dx:10,
-			dy:10
-			//dx:0.4,
-			//dy:0.3
+			dy:10,
+			minLength:2
 		},
-		getPostsFromWall: function(callback) {
+		getFrindLists: function(){
+			var self = this;
+			FB.api(
+				{
+					method: 'fql.query',
+					query: "SELECT flid, owner, name FROM friendlist WHERE owner=me()"
+				},
+				function(response) {
+					console.log( response);
+				}
+			)
+		},
+		getPlaces: function(target, callback){
+			var self = this;
+			var idsArray = Object.keys(target);
+			FB.api(
+				{
+					method: 'fql.query',
+					query: self.buildPlacesQuery(idsArray)
+				},
+				function(response) {
+					callback(response);
+				}
+			);
+		},
+		mergeResult:function(arr, minLength) {
+			var res = {};
+			arr.forEach(function(e) {
+				if (typeof e.page_id === "undefined") {
+						//photo
+						if (!(e.place_id in res)) {
+								res[e.place_id] = [];
+						}
+						res[e.place_id].push({
+								type: "photo",
+								obj: e
+						});
+				};
+				if (typeof e.place_id === "undefined") {
+					if (!(e.page_id in res)) {
+						res[e.page_id] = [];
+					}
+					res[e.page_id].push({
+						type: "checkin",
+						obj: e
+					});
+				}
+			});
+			var finalRes = {};
+			for(var key in res){
+				if (res[key].length >= minLength){
+					finalRes[key] = res[key];
+				}
+			}
+			return finalRes;
+		},
+		buildPlacesQuery:function(placesIdArray) {
+			var queryPart = "SELECT page_id, name, description, latitude, longitude, display_subtext FROM place";
+			var subs = placesIdArray.map(function(el) {
+					return "page_id = " + el;
+			});
+    	return queryPart + " WHERE " + subs.join(" OR ");
+		},
+		getCheckins: function(callback) {
 			var self = this;
 			self.current(function(currentCoords){
 				var sw = [];
@@ -131,25 +267,25 @@ var APP = function(){
 				sw.push(currentCoords[1] - self.config.dx)
 				ne.push(currentCoords[0] + self.config.dy)
 				ne.push(currentCoords[1] + self.config.dx)
-				var queryBase = "SELECT message,comments,attachment FROM stream WHERE post_id IN (SELECT author_uid, page_id, tagged_uids, post_id," + 
-				" coords, timestamp, message FROM checkin WHERE (author_uid in (select"+
-				" uid2 from friend where uid1=me())) AND coords.latitude > 'sw[0]' AND"+
-				" coords.latitude < 'ne[0]' AND coords.longitude > 'sw[1]' AND"+
-				" coords.longitude < 'ne[1]' ORDER BY timestamp DESC)"
+				var locationQuery = "(SELECT id FROM location_post WHERE (coords.latitude > 'sw[0]' AND " +
+				" coords.latitude < 'ne[0]' AND coords.longitude > 'sw[1]' AND coords.longitude < 'ne[1]')"+
+				" AND (author_uid=me() OR author_uid IN (select uid2 from friend where uid1=me())) ORDER BY timestamp DESC)";
+				var queryBase = "SELECT page_id, timestamp, tagged_uids, message,author_uid FROM checkin WHERE checkin_id IN " + locationQuery; 
 				var query = queryBase.replace("sw[0]", sw[0], "gi").replace("sw[1]", sw[1], "gi").replace("ne[0]", ne[0], "gi").replace("ne[1]", ne[1], "gi");
-				FB.api(
-					{
-						method: 'fql.query',
-						query: query
-					},
-					function(response) {
-						self.list = response;
-						callback(self.list);
-					}
-				);
+				self.current(function(currentCoords){
+					FB.api(
+						{
+							method: 'fql.query',
+							query: query
+						},
+						function(response) {
+							callback(response);
+						}
+					);
+				});
 			});
 		},
-		getFriendsCheckins: function(callback) {
+		getImages: function(callback) {
 			var self = this;
 			self.current(function(currentCoords){
 				var sw = [];
@@ -158,11 +294,10 @@ var APP = function(){
 				sw.push(currentCoords[1] - self.config.dx)
 				ne.push(currentCoords[0] + self.config.dy)
 				ne.push(currentCoords[1] + self.config.dx)
-				var queryBase = "SELECT author_uid, page_id, tagged_uids, post_id," + 
-				" coords, timestamp, message FROM checkin WHERE (author_uid in (select"+
-				" uid2 from friend where uid1=me())) AND coords.latitude > 'sw[0]' AND"+
-				" coords.latitude < 'ne[0]' AND coords.longitude > 'sw[1]' AND"+
-				" coords.longitude < 'ne[1]' ORDER BY timestamp DESC"
+				var locationQuery = "(SELECT id FROM location_post WHERE (coords.latitude > 'sw[0]' AND " +
+				" coords.latitude < 'ne[0]' AND coords.longitude > 'sw[1]' AND coords.longitude < 'ne[1]')"+
+				" AND (author_uid=me() OR author_uid IN (select uid2 from friend where uid1=me())) ORDER BY timestamp DESC)";
+				var queryBase = "SELECT src, images, created, link,  owner, caption, place_id FROM photo WHERE object_id in " + locationQuery; 
 				var query = queryBase.replace("sw[0]", sw[0], "gi").replace("sw[1]", sw[1], "gi").replace("ne[0]", ne[0], "gi").replace("ne[1]", ne[1], "gi");
 				FB.api(
 					{
@@ -170,8 +305,7 @@ var APP = function(){
 						query: query
 					},
 					function(response) {
-						self.list = response;
-						callback(self.list);
+						callback(response);
 					}
 				);
 			});
@@ -181,7 +315,6 @@ var APP = function(){
 				console.log(msg);
 			}
 			var success = function(position){
-				console.log(typeof callback);
 				callback([position.coords.latitude, position.coords.longitude]);
 			}
 			if (navigator.geolocation) {
