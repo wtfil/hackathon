@@ -133,12 +133,6 @@ var APP = function(){
       minutes = minutes < 10 ? ('0' + minutes) : minutes;
       return [day, d.getDate(), month, hours + ':' + minutes].join(' ');
     },
-    convertDescription: function (description) {
-      var self = this;
-      var temp = jQuery(self.template('balloon', {description: description}))
-        .find('p');
-      return description;
-    },
     checkPoint: function (point) {
       var self = this,
         saved,
@@ -149,10 +143,8 @@ var APP = function(){
       }
       for (key = 0; key < self.points.length; key++) {
         saved = self.points[key];
-        console.log(saved);
         diff = Math.pow(saved.latitude - point.latitude, 2) +
           Math.pow(saved.longitude - point.longitude, 2);
-        console.log(diff);
         if (diff < 0.0000004) {
           return false;
         }
@@ -168,7 +160,6 @@ var APP = function(){
         var d = new Date(event.start_time);
         event.userCount = event.users.length;
         event.startTime = self.convertDate(event.start_time);
-        event.description = self.convertDescription(event.description);
         event.friends = event.users.map(function (id) {
           return self.template('user', {id: id});
         }).join('');
@@ -304,23 +295,21 @@ var APP = function(){
 				" AND (author_uid=me() OR author_uid IN (select uid2 from friend where uid1=me())) ORDER BY timestamp DESC)";
 				var queryBase = "SELECT page_id, timestamp, tagged_uids, message,author_uid FROM checkin WHERE checkin_id IN " + locationQuery; 
 				var query = queryBase.replace("sw[0]", sw[0], "gi").replace("sw[1]", sw[1], "gi").replace("ne[0]", ne[0], "gi").replace("ne[1]", ne[1], "gi");
-				self.current(function(currentCoords){
-					FB.api(
-						{
-							method: 'fql.query',
-							query: query
-						},
-						function(response) {
-							callback(response);
-						}
-					);
-				});
-			});
-		},
-		getImages: function(callback) {
-			var self = this;
-			self.current(function(currentCoords){
-				var sw = [];
+        FB.api(
+          {
+            method: 'fql.query',
+            query: query
+          },
+          function(response) {
+            callback(response);
+          }
+        );
+    });
+  },
+  getImages: function(callback) {
+    var self = this;
+    self.current(function(currentCoords){
+      var sw = [];
 				var ne = [];
 				sw.push(currentCoords[0] - self.config.dy)
 				sw.push(currentCoords[1] - self.config.dx)
