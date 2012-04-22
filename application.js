@@ -122,8 +122,6 @@ var APP = function(){
 			dx:10,
 			dy:10,
 			minLength:2
-			//dx:0.4,
-			//dy:0.3
 		},
 		getFrindLists: function(){
 			var self = this;
@@ -190,29 +188,49 @@ var APP = function(){
 		},
 		getCheckins: function(callback) {
 			var self = this;
-			var locationQuery = "(SELECT id FROM location_post WHERE (author_uid = me() OR author_uid IN (select uid2 from friend where uid1=me())) ORDER BY timestamp DESC)";
-			var queryBase = "SELECT page_id,timestamp,tagged_uids,message,author_uid FROM checkin WHERE checkin_id IN " + locationQuery; 
 			self.current(function(currentCoords){
-				FB.api(
-					{
-						method: 'fql.query',
-						query: queryBase
-					},
-					function(response) {
-						callback(response);
-					}
-				);
+				var sw = [];
+				var ne = [];
+				sw.push(currentCoords[0] - self.config.dy)
+				sw.push(currentCoords[1] - self.config.dx)
+				ne.push(currentCoords[0] + self.config.dy)
+				ne.push(currentCoords[1] + self.config.dx)
+				var locationQuery = "(SELECT id FROM location_post WHERE (coords.latitude > 'sw[0]' AND " +
+				" coords.latitude < 'ne[0]' AND coords.longitude > 'sw[1]' AND coords.longitude < 'ne[1]')"+
+				" AND (author_uid=me() OR author_uid IN (select uid2 from friend where uid1=me())) ORDER BY timestamp DESC)";
+				var queryBase = "SELECT page_id, timestamp, tagged_uids, message,author_uid FROM checkin WHERE checkin_id IN " + locationQuery; 
+				var query = queryBase.replace("sw[0]", sw[0], "gi").replace("sw[1]", sw[1], "gi").replace("ne[0]", ne[0], "gi").replace("ne[1]", ne[1], "gi");
+				self.current(function(currentCoords){
+					FB.api(
+						{
+							method: 'fql.query',
+							query: query
+						},
+						function(response) {
+							callback(response);
+						}
+					);
+				});
 			});
 		},
 		getImages: function(callback) {
 			var self = this;
-			var locationQuery = "(SELECT id FROM location_post WHERE (author_uid = me() OR author_uid IN (select uid2 from friend where uid1=me())) ORDER BY timestamp DESC)";
-			var queryBase = "SELECT src,owner,caption, place_id FROM photo WHERE object_id in " + locationQuery; 
 			self.current(function(currentCoords){
+				var sw = [];
+				var ne = [];
+				sw.push(currentCoords[0] - self.config.dy)
+				sw.push(currentCoords[1] - self.config.dx)
+				ne.push(currentCoords[0] + self.config.dy)
+				ne.push(currentCoords[1] + self.config.dx)
+				var locationQuery = "(SELECT id FROM location_post WHERE (coords.latitude > 'sw[0]' AND " +
+				" coords.latitude < 'ne[0]' AND coords.longitude > 'sw[1]' AND coords.longitude < 'ne[1]')"+
+				" AND (author_uid=me() OR author_uid IN (select uid2 from friend where uid1=me())) ORDER BY timestamp DESC)";
+				var queryBase = "SELECT src, images, created, link,  owner, caption, place_id FROM photo WHERE object_id in " + locationQuery; 
+				var query = queryBase.replace("sw[0]", sw[0], "gi").replace("sw[1]", sw[1], "gi").replace("ne[0]", ne[0], "gi").replace("ne[1]", ne[1], "gi");
 				FB.api(
 					{
 						method: 'fql.query',
-						query: queryBase
+						query: query
 					},
 					function(response) {
 						callback(response);
