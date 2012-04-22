@@ -27,6 +27,19 @@ var APP = function(){
             '<div><div class="pseudo">{userCount} friends will going</div></div>' +
           '</div>' +
           '<div class="placemark-tail"><div></div></div>',
+        balloonCheckin:
+          '<div class="placemark balloon">' + 
+            '<h4>{name}</h4>' +
+            '<div class="content col-left">' +
+              '<p>{description}</p>' +
+              '<div>{friends}</div>' +
+            '</div>' +
+            '<div class="content col-right">' +
+              '<img src="{pic_big}"/>' +
+            '</div>' +
+						'<h4>3123132132</h4>' +
+          '</div>' + 
+          '<div class="placemark-tail"><div></div></div>',
         balloon:
           '<div class="placemark balloon">' + 
             '<h4>{name}</h4>' +
@@ -41,7 +54,7 @@ var APP = function(){
           '<div class="placemark-tail"><div></div></div>',
         checkin: 
           '<div class="placemark">' +
-            '<h4>{name}</h4>' +
+            '<h4>1{name}</h4>' +
             '<div><div class="pseudo">{userCount} friends were here</div></div>' +
           '</div>' +
           '<div class="placemark-tail"><div></div></div>',
@@ -93,12 +106,10 @@ var APP = function(){
 			UsersEvents.getFriendsEvents(function(response){
 				allData.events = response;
         if (++callbackCounter === 2) callback(allData);
-				console.log('first');
 			});
 			new CheckiList(function (data) {
         allData.checkins = data;
         if (++callbackCounter === 2) callback(allData);
-				console.log('second');
       });
     },
     showMeOnMap: function () {
@@ -164,6 +175,7 @@ var APP = function(){
         event.userCount = event.users.length;
         event.startTime = self.convertDate(event.start_time);
         event.friends = event.users.map(function (id) {
+				console.log(event);
           return self.template('user', {id: id});
         }).join('');
         placemark = self.template('placemark', event);
@@ -173,9 +185,7 @@ var APP = function(){
         }
         Map.placemark(event.venue, placemark, balloon);
       });
-      console.log(data.checkins);
       data.checkins.placesList.forEach(function (place) {
-				console.log(place.uids.length);
 				place.userCount = place.uids.length;
         place.friends = place.uids.map(function (id) {
           return self.template('user', {id: id});
@@ -188,7 +198,7 @@ var APP = function(){
           return;
         }
         placemark = self.template('checkin', place);
-        balloon = self.template('balloon', place);
+        balloon = self.template('balloonCheckin', place);
         Map.placemark(coords, placemark, balloon);
       });
     }
@@ -228,8 +238,9 @@ var APP = function(){
 								});
 							}
 						}
-						console.log(placesList);
 					});
+					console.log(placesList);
+					console.log(mergeResult);
           callback({
             mergeResult: mergeResult,
             placesList: placesList
@@ -268,6 +279,7 @@ var APP = function(){
 				function(response) {
 					response.forEach(function(elem){
 						elem.uids = [];
+						elem.messages = [];
 					});
 					callback(response);
 				}
