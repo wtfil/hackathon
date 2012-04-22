@@ -34,10 +34,6 @@ var APP = function(){
               '<p>{description}</p>' +
               '<div>{friends}</div>' +
             '</div>' +
-            '<div class="content col-right">' +
-              '<img src="{pic_big}"/>' +
-            '</div>' +
-						'<h4>3123132132</h4>' +
           '</div>' + 
           '<div class="placemark-tail"><div></div></div>',
         balloon:
@@ -50,23 +46,11 @@ var APP = function(){
             '<div class="content col-right">' +
               '<img src="{pic_big}"/>' +
             '</div>' +
-          '</div>',
-         balloonCheckin:
-          '<div class="placemark balloon">' + 
-            '<h4>{name}</h4>' +
-            '<div class="content col-left">' +
-              '<ul></ul>' +
-              '<div>{friends}</div>' +
-            '</div>' +
-            '<div class="content col-right">' +
-              '<img src="{pic_big}"/>' +
-            '</div>' +
           '</div>' + 
-          '<div class="placemark-tail"><div></div></div>', 
-				comment:'',
+          '<div class="placemark-tail"><div></div></div>',
         checkin: 
           '<div class="placemark">' +
-            '<h4>1{name}</h4>' +
+            '<h4>{name}</h4>' +
             '<div><div class="pseudo">{userCount} friends were here</div></div>' +
           '</div>' +
           '<div class="placemark-tail"><div></div></div>',
@@ -266,7 +250,7 @@ var APP = function(){
 		config:{
 			dx:10,
 			dy:10,
-			minLength:2
+			minLength:3
 		},
 		getFrindLists: function(){
 			var self = this;

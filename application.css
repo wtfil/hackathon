@@ -47,7 +47,6 @@ body {
 }
 .placemark .content{
   overflow: hidden;
-  min-height: 128px;
 }
 .placemark .col-left{
   width:262px;
