@@ -1,6 +1,8 @@
 body {
   font-family: Arial,sans-serif;
   font-size: 10px;
+	margin:0;
+	padding:0;
 }
 #load{
   width:100%;
@@ -99,4 +101,32 @@ body {
   border-style: solid;
   position: absolute;
 }
-
+/*head*/
+	.b-head{
+		width:100%;
+		height:50px;
+		background: url('/images/head_bg1.png') repeat-x;
+		border-bottom: 1px solid rgba(0,0,0,0.2);
+	}
+/*logo*/
+	.b-logo{
+		font-size:16px;
+		overflow:hidden;
+	}
+	.b-logo__link{ 
+		text-decoration:none;
+	}
+	.b-logo__title{
+		font-family:'Lobster', 'AwakeBold';
+		margin:4px 20px;
+		color:#8E4423;
+		font-size:2em;
+		letter-spacing:-1px;
+		text-shadow: 1px 1px 0 rgba(255,255,255,0.1);
+	}
+	#SDKmap{
+		width:100%;
+		position:absolute;
+		top:50px;
+		bottom:0;
+	}
