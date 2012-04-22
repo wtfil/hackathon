@@ -18,6 +18,7 @@ var Map = (function () {
     _hideBalloons: function () {
       this._elements.forEach(function (e) {
         e.balloon.setOptions({ visible: false });
+        e.placemark.setOptions({ visible: true });
       })
     },
     placemark: function (coords, placemarkHTML, balloonHTML) {
@@ -30,9 +31,9 @@ var Map = (function () {
       placemark.setHtmlContent(placemarkHTML);
       balloon.setHtmlContent(balloonHTML);
       Microsoft.Maps.Events.addHandler(placemark, 'click', function(){
+        this._hideBalloons();
         balloon.setOptions({ visible: true });
-        placemark.setOptions({ visible: false });
-      });
+      }.bind(this));
       Microsoft.Maps.Events.addHandler(balloon, 'click', function () {
         balloon.setOptions({ visible: false });
         placemark.setOptions({ visible: true });

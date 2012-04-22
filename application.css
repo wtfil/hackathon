@@ -1,27 +1,91 @@
+body {
+  font-family: Arial,sans-serif;
+  font-size: 10px;
+}
 .placemark {
   background: white;
-  padding: 5px;
+  padding: 10px;
+  -webkit-border-radius: 3px;
+  -webkit-border-bottom-left-radius: 0;
+  -moz-border-radius: 3px;
+  -moz-border-radius-bottomleft: 0;
+  border-radius: 3px;
+  border-bottom-left-radius: 0;
+  width: 100px;
+  overflow: hidden;
   -moz-box-shadow:    4px 2px 3px #aaa;
   -webkit-box-shadow: 4px 2px 3px #aaa;
   box-shadow:         4px 2px 3px #aaa;
+  overflow: hidden;
+  border: 1px solid #a1a1a1;
+}
+.balloon {
+  width: 400px;
+}
+.placemark p {
+  width:100%;
+  float: left;
+  font-size: 12px;
+  max-height: 128px;
+  overflow: hidden;
+  margin: 0;
+  margin-bottom: 10px;
+  word-wrap: break-word;
+}
+.placemark .content{
+  overflow: hidden;
+  min-height: 128px;
+}
+.placemark .col-left{
+  width:262px;
+  float:left;
+}
+.placemark .col-right{
+  margin-left:10px;
+  width:128px;
+  float:left;
 }
 .placemark h4 {
   margin: 0;
+  font-size: 12px;
+  color: #0093F9;
+  /*font-weight: normal;*/
+}
+.placemark .pseudo {
+  color: #0093F9;
+  border-bottom: 1px dashed #0093F9;
+  text-decoration: none;
+  display: inline;
+  cursor: pointer;
 }
 .placemark img {
-  max-width: 64px;
-  max-height: 64px;
+  max-width: 64;
+  float: right;
+}
+.placemark .user{
+  float: left;
+  margin: 0px 10px 0 0;
 }
 .balloon img {
   max-width: 128;
   max-height: 128;
 }
 .placemark-tail {
-  margin-left: 10px;
   height: 0px;
   width: 0px;
-  border-width: 0 0 20px 20px;
+  border-width: 0 0 20px 10px;
+  border-color: transparent #a1a1a1;
+  border-style: solid;
+  position:relative;
+}
+.placemark-tail div{
+  margin-top: -4px;
+  margin-left: -9px;
+  height: 0px;
+  width: 0px;
+  border-width: 0 0 20px 10px;
   border-color: transparent white;
   border-style: solid;
+  position: absolute;
 }
 

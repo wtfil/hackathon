@@ -4,23 +4,6 @@ var APP = function(){
 		self.accessToken;
 		self.uid;
 		self.init(function(){
-			console.log(self.accessToken);
-			var events;
-			UsersEvents.getFriendsEvents(function(response){
-				events = response;
-			});
-			var myCheckiList = new checkiList([-90,-180], [90,180]);
-			//FB.api(
-			//	{
-			//		method: 'fql.query',
-			//		query: "SELECT author_uid, page_id, tagged_uids, post_id, coords, timestamp, message FROM checkin WHERE (author_uid in (select uid2 from friend where uid1=me())) AND coords.latitude > '-90' AND coords.latitude < 90 AND coords.longitude > '-180' AND coords.longitude < 180 ORDER BY timestamp DESC"
-			//		//query: 'SELECT author_uid, page_id, tagged_uids, post_id, coords, timestamp, message FROM checkin WHERE ( author_uid in (select uid2 from friend where uid1=me()) ) AND coords.latitude > -90 AND coords.latitude < 90 AND coords.longitude > 180 AND coords.lontitude < 180 ORDER BY timestamp DESC'
-			//		//query: 'SELECT name FROM user WHERE uid=me()'
-			//	},
-			//	function(response) {
-			//		console.log(response);
-			//	}
-			//);
       self.getAllData(function (data) {
         self.showBestOnMap(data);
       });  
@@ -31,9 +14,33 @@ var APP = function(){
 			appId      : '403886702969818',
 			channelUrl : 'http://friday.incubus.univ.kiev.ua/index.html',
       templates: {
-        placemark: '<div class="placemark"><h4>{name}</h4><img src="{pic_small}"/></div><div class="placemark-tail"></div>',
-        balloon: '<div class="balloon"><h4>{name}</h4><img src="{pic_big}"/></div><div class="placemark-tail"></div>',
-        checkin: '<div class="placemark"><h4>{message}</h4></div>',
+        user: 
+          '<a target="_blank" class="user" href="http://facebook.com/profile.php?id={id}">' +
+            '<img src="http://graph.facebook.com/{id}/picture">' +
+          '</a>',
+        placemark: 
+          '<div class="placemark">' + 
+            '<h4>{name}</h4>' + 
+            '<div>{startTime}</div>' +
+            '<div><div class="pseudo">{userCount} friends will going</div></div>' +
+          '</div>' +
+          '<div class="placemark-tail"><div></div></div>',
+        balloon:
+          '<div class="placemark balloon">' + 
+            '<h4>{name}</h4>' +
+            '<div class="content col-left">' +
+              '<p>{description}</p>' +
+              '<div>{friends}</div>' +
+            '</div>' +
+            '<div class="content col-right">' +
+              '<img src="{pic_big}"/>' +
+            '</div>' +
+          '</div>' + 
+          '<div class="placemark-tail"><div></div></div>',
+        checkin: 
+          '<div class="placemark">' +
+            '<h4>{message}</h4>' +
+          '</div>',
         me: '<img src="http://graph.facebook.com/{id}/picture">'
       }
 		},
@@ -69,7 +76,7 @@ var APP = function(){
       var self = this,
         st = self.conf.templates[name];
       Object.keys(options || {}).forEach(function (key) {
-        if (typeof options[key] !== 'string') {
+        if (typeof options[key] !== 'string' && typeof options[key] !== 'number') {
           return;
         }
         st = st.replace(new RegExp('{' + key + '}', 'g'), options[key]);
@@ -77,15 +84,15 @@ var APP = function(){
       return st;
     },
     getAllData: function (callback) {
-      var allData = {
-        events: [
-          {name: 'metallica', pic_small: 'http://profile.ak.fbcdn.net/hprofile-ak-snc4/373005_173676372738073_345025705_n.jpg', location: {latitude: 50.455, longitude: 30.52}, pic_big: 'http://icons.iconseeker.com/png/fullsize/smurf-houses/smurf-house-exterior.png'},
-          {name: 'metallica', pic_small: 'http://profile.ak.fbcdn.net/hprofile-ak-snc4/373005_173676372738073_345025705_n.jpg', location: {latitude: 50.465, longitude: 30.52}}
-        ]
-      };
+      var allData = {},
+        callbackCounter = 0;
+			UsersEvents.getFriendsEvents(function(response){
+				allData.events = response;
+        if (++callbackCounter === 2) callback(allData);
+			});
       CheckiList.getFriendsCheckins(function (checkins) {
         allData.checkins = checkins;
-        callback(allData);
+        if (++callbackCounter === 2) callback(allData);
       });
     },
     showMeOnMap: function () {
@@ -93,43 +100,78 @@ var APP = function(){
         placemark = self.template('me', { id: self.uid });
       Map.placemark(null, placemark);
     },
+    convertDate: function (timestamp) {
+      var d = new Date(timestamp * 1000),
+        day = ['Sunday',
+          'Monday',
+          'Tuesday',
+          'Wednesday',
+          'Thursday',
+          'Friday',
+          'Saturday'
+        ][d.getDay()],
+        month = [
+          'Jan',
+          'Feb',
+          'Mar',
+          'Apr',
+          'May',
+          'Jun',
+          'Jul',
+          'Aug',
+          'Sep',
+          'Oct',
+          'Nov',
+          'Dec'
+        ][d.getMonth()],
+        hours = d.getHours(),
+        minutes = d.getMinutes();
+      hours = hours < 10 ? ('0' + hours) : hours;
+      minutes = minutes < 10 ? ('0' + minutes) : minutes;
+      return [day, d.getDate(), month, hours + ':' + minutes].join(' ');
+    },
+    convertDescription: function (description) {
+      var self = this;
+      var temp = jQuery(self.template('balloon', {description: description}))
+        .find('p');
+      return description;
+    },
     showBestOnMap: function (data) {
       var self = this,
         placemark,
         balloon = 'qq';
-      console.log(data.checkins);
       data.events.forEach(function (event) {
+        var d = new Date(event.start_time);
+        event.userCount = event.users.length;
+        event.startTime = self.convertDate(event.start_time);
+        event.description = self.convertDescription(event.description);
+        event.friends = event.users.map(function (id) {
+          return self.template('user', {id: id});
+        }).join('');
+        //console.log(event)
         placemark = self.template('placemark', event);
         balloon = self.template('balloon', event);
-        Map.placemark(event.location, placemark, balloon);
+        Map.placemark(event.venue, placemark, balloon);
       });
-      data.checkins.forEach(function (checkin) {
-        placemark = self.template('checkin', checkin);
-        balloon = self.template('balloon', checkin);
-        Map.placemark(checkin.coords, placemark, balloon);
-      });
+      //data.checkins.forEach(function (checkin) {
+      //  placemark = self.template('checkin', checkin);
+      //  balloon = self.template('balloon', checkin);
+      //  Map.placemark(checkin.coords, placemark, balloon);
+      //});
     }
 	}
   var CheckiList = (function () {
 	  var checkiList = function(){
 	  	var self = this;
 	  	self.list = {};
-	  	//self.getPostsFromWall(function(list){
-	  	//	console.log(list);
-	  	//});
-	  	//self.getFriendsCheckins(function(list){
-	  	//	console.log(list.length);
-	  	//});
 	  	return self;
 	  }
 	  checkiList.prototype = {
 	  	config:{
 	  		dx:10,
 	  		dy:10
-	  		//dx:0.4,
-	  		//dy:0.3
 	  	},
-      mergeByCoordinates: function (raw) {
+      _mergeByCoordinates: function (raw) {
         var result = {},
           accuracy = 0.002 * 0.002,
           i, j,
@@ -137,7 +179,6 @@ var APP = function(){
           diff,
           anyChanges = false,
           second;
-        console.time('s');
         for (i = 0; i < raw.length; i++) {
           raw[i].group = raw[i].group || i;
         }
@@ -156,11 +197,6 @@ var APP = function(){
         if (anyChanges) {
           return this.mergeByCoordinates(raw);
         }
-        //raw.forEach(function (element) {
-        //  var key = element.group;
-        //  result[key] || result[key] = element;
-        //  console.log(element);
-        //});
         return raw;
       },
 	  	getPostsFromWall: function(callback) {
@@ -211,7 +247,7 @@ var APP = function(){
 	  					query: query
 	  				},
 	  				function(response) {
-	  					self.list = self.mergeByCoordinates(response);
+	  					self.list = response;
 	  					callback(self.list);
 	  				}
 	  			);
@@ -222,7 +258,6 @@ var APP = function(){
 	  			console.log(msg);
 	  		}
 	  		var success = function(position){
-	  			console.log(typeof callback);
 	  			callback([position.coords.latitude, position.coords.longitude]);
 	  		}
 	  		if (navigator.geolocation) {
