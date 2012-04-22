@@ -4,13 +4,8 @@ var APP = function(){
 		self.accessToken;
 		self.uid;
 		self.init(function(){
-			console.log(self.accessToken);
-			var events;
-			UsersEvents.getFriendsEvents(function(response){
-				events = response;
-			});
-			var myCheckiList = new checkiList();
       self.getAllData(function (data) {
+        jQuery('#load').hide();
         self.showBestOnMap(data);
       });  
 		});
@@ -20,8 +15,33 @@ var APP = function(){
 			appId      : '403886702969818',
 			channelUrl : 'http://friday.incubus.univ.kiev.ua/index.html',
       templates: {
-        placemark: '<div class="placemark"><h4>{name}</h4><img src="{pic_small}"/></div><div class="placemark-tail"></div>',
-        balloon: '<div class="balloon"><h4>{name}</h4><img src="{pic_big}"/></div><div class="placemark-tail"></div>',
+        user: 
+          '<a target="_blank" class="user" href="http://facebook.com/profile.php?id={id}">' +
+            '<img src="http://graph.facebook.com/{id}/picture">' +
+          '</a>',
+        placemark: 
+          '<div class="placemark">' + 
+            '<h4>{name}</h4>' + 
+            '<div>{startTime}</div>' +
+            '<div><div class="pseudo">{userCount} friends will going</div></div>' +
+          '</div>' +
+          '<div class="placemark-tail"><div></div></div>',
+        balloon:
+          '<div class="placemark balloon">' + 
+            '<h4>{name}</h4>' +
+            '<div class="content col-left">' +
+              '<p>{description}</p>' +
+              '<div>{friends}</div>' +
+            '</div>' +
+            '<div class="content col-right">' +
+              '<img src="{pic_big}"/>' +
+            '</div>' +
+          '</div>' + 
+          '<div class="placemark-tail"><div></div></div>',
+        checkin: 
+          '<div class="placemark">' +
+            '<h4>{message}</h4>' +
+          '</div>',
         me: '<img src="http://graph.facebook.com/{id}/picture">'
       }
 		},
@@ -57,7 +77,7 @@ var APP = function(){
       var self = this,
         st = self.conf.templates[name];
       Object.keys(options || {}).forEach(function (key) {
-        if (typeof options[key] !== 'string') {
+        if (typeof options[key] !== 'string' && typeof options[key] !== 'number') {
           return;
         }
         st = st.replace(new RegExp('{' + key + '}', 'g'), options[key]);
@@ -65,33 +85,84 @@ var APP = function(){
       return st;
     },
     getAllData: function (callback) {
-      var data = {
-        events: [
-          {name: 'metallica', pic_small: 'http://profile.ak.fbcdn.net/hprofile-ak-snc4/373005_173676372738073_345025705_n.jpg', location: {latitude: 50.455, longitude: 30.52}, pic_big: 'http://icons.iconseeker.com/png/fullsize/smurf-houses/smurf-house-exterior.png'},
-          {name: 'metallica', pic_small: 'http://profile.ak.fbcdn.net/hprofile-ak-snc4/373005_173676372738073_345025705_n.jpg', location: {latitude: 50.465, longitude: 30.52}}
-        ]
-      };
-      setTimeout(function () {
-        callback(data);
-      }, 300)
+      var allData = {},
+        callbackCounter = 0;
+			UsersEvents.getFriendsEvents(function(response){
+				allData.events = response;
+        if (++callbackCounter === 2) callback(allData);
+			});
+			new CheckiList(function (data) {
+        console.log(data);
+        data.checkins = data;
+        if (++callbackCounter === 2) callback(allData);
+      });
     },
     showMeOnMap: function () {
       var self = this,
         placemark = self.template('me', { id: self.uid });
       Map.placemark(null, placemark);
     },
+    convertDate: function (timestamp) {
+      var d = new Date(timestamp * 1000),
+        day = ['Sunday',
+          'Monday',
+          'Tuesday',
+          'Wednesday',
+          'Thursday',
+          'Friday',
+          'Saturday'
+        ][d.getDay()],
+        month = [
+          'Jan',
+          'Feb',
+          'Mar',
+          'Apr',
+          'May',
+          'Jun',
+          'Jul',
+          'Aug',
+          'Sep',
+          'Oct',
+          'Nov',
+          'Dec'
+        ][d.getMonth()],
+        hours = d.getHours(),
+        minutes = d.getMinutes();
+      hours = hours < 10 ? ('0' + hours) : hours;
+      minutes = minutes < 10 ? ('0' + minutes) : minutes;
+      return [day, d.getDate(), month, hours + ':' + minutes].join(' ');
+    },
+    convertDescription: function (description) {
+      var self = this;
+      var temp = jQuery(self.template('balloon', {description: description}))
+        .find('p');
+      return description;
+    },
     showBestOnMap: function (data) {
       var self = this,
         placemark,
         balloon = 'qq';
       data.events.forEach(function (event) {
+        var d = new Date(event.start_time);
+        event.userCount = event.users.length;
+        event.startTime = self.convertDate(event.start_time);
+        event.description = self.convertDescription(event.description);
+        event.friends = event.users.map(function (id) {
+          return self.template('user', {id: id});
+        }).join('');
+        //console.log(event)
         placemark = self.template('placemark', event);
         balloon = self.template('balloon', event);
-        Map.placemark(event.location, placemark, balloon);
+        Map.placemark(event.venue, placemark, balloon);
       });
+      //data.checkins.forEach(function (checkin) {
+      //  placemark = self.template('checkin', checkin);
+      //  balloon = self.template('balloon', checkin);
+      //  Map.placemark(checkin.coords, placemark, balloon);
+      //});
     }
 	}
-	var checkiList = function(){
+	var CheckiList = function(callback){
 		var self = this;
 		var pagesList = [];
 		self.list = {};
@@ -109,15 +180,16 @@ var APP = function(){
 				});
 				var mergeResult = self.mergeResult(checkinsList.concat(imagesList), self.config.minLength);
 				self.getPlaces(mergeResult, function(placesList){
-					console.dir(mergeResult);
-					console.dir(placesList);
+          callback({
+            mergeResult: mergeResult,
+            placesList: placesList
+          });
 				});
-				console.log(pagesList.length);
 			});
 		});
 		return self;
 	}
-	checkiList.prototype = {
+	CheckiList.prototype = {
 		config:{
 			dx:10,
 			dy:10,
