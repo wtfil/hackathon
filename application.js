@@ -53,32 +53,85 @@ var APP = function(){
 			 });
 		}
 	}
-	var checkiList = function(sw,ne){
+	var checkiList = function(){
 		var self = this;
-		//self.getFriendsCheckins(sw,ne);
-		self.current();
+		self.list = {};
+		//self.getPostsFromWall(function(list){
+		//	console.log(list);
+		//});
+		self.getFriendsCheckins(function(list){
+			console.log(list.length);
+		});
+		return self;
 	}
 	checkiList.prototype = {
-		getFriendsCheckins: function(sw,ne) {
-				var queryBase = "SELECT author_uid, page_id, tagged_uids, post_id, coords, timestamp, message FROM checkin WHERE (author_uid in (select uid2 from friend where uid1=me())) AND coords.latitude > 'sw[0]' AND coords.latitude < ne[0] AND coords.longitude > 'sw[1]' AND coords.longitude < ne[1] ORDER BY timestamp DESC"
-			var query = queryBase.replace("sw[0]", sw[0], "gi").replace("sw[1]", sw[1], "gi").replace("ne[0]", ne[0], "gi").replace("ne[1]", ne[1], "gi");
-			FB.api(
-				{
-					method: 'fql.query',
-					query: query
-					//query: 'SELECT name FROM user WHERE uid=me()'
-				},
-				function(response) {
-					return response;
-				}
-			);
+		config:{
+			dx:10,
+			dy:10
+			//dx:0.4,
+			//dy:0.3
 		},
-		current: function(){
+		getPostsFromWall: function(callback) {
+			var self = this;
+			self.current(function(currentCoords){
+				var sw = [];
+				var ne = [];
+				sw.push(currentCoords[0] - self.config.dy)
+				sw.push(currentCoords[1] - self.config.dx)
+				ne.push(currentCoords[0] + self.config.dy)
+				ne.push(currentCoords[1] + self.config.dx)
+				var queryBase = "SELECT message,comments,attachment FROM stream WHERE post_id IN (SELECT author_uid, page_id, tagged_uids, post_id," + 
+				" coords, timestamp, message FROM checkin WHERE (author_uid in (select"+
+				" uid2 from friend where uid1=me())) AND coords.latitude > 'sw[0]' AND"+
+				" coords.latitude < 'ne[0]' AND coords.longitude > 'sw[1]' AND"+
+				" coords.longitude < 'ne[1]' ORDER BY timestamp DESC)"
+				var query = queryBase.replace("sw[0]", sw[0], "gi").replace("sw[1]", sw[1], "gi").replace("ne[0]", ne[0], "gi").replace("ne[1]", ne[1], "gi");
+				FB.api(
+					{
+						method: 'fql.query',
+						query: query
+					},
+					function(response) {
+						self.list = response;
+						callback(self.list);
+					}
+				);
+			});
+		},
+		getFriendsCheckins: function(callback) {
+			var self = this;
+			self.current(function(currentCoords){
+				var sw = [];
+				var ne = [];
+				sw.push(currentCoords[0] - self.config.dy)
+				sw.push(currentCoords[1] - self.config.dx)
+				ne.push(currentCoords[0] + self.config.dy)
+				ne.push(currentCoords[1] + self.config.dx)
+				var queryBase = "SELECT author_uid, page_id, tagged_uids, post_id," + 
+				" coords, timestamp, message FROM checkin WHERE (author_uid in (select"+
+				" uid2 from friend where uid1=me())) AND coords.latitude > 'sw[0]' AND"+
+				" coords.latitude < 'ne[0]' AND coords.longitude > 'sw[1]' AND"+
+				" coords.longitude < 'ne[1]' ORDER BY timestamp DESC"
+				var query = queryBase.replace("sw[0]", sw[0], "gi").replace("sw[1]", sw[1], "gi").replace("ne[0]", ne[0], "gi").replace("ne[1]", ne[1], "gi");
+				FB.api(
+					{
+						method: 'fql.query',
+						query: query
+					},
+					function(response) {
+						self.list = response;
+						callback(self.list);
+					}
+				);
+			});
+		},
+		current: function(callback){
 			var error = function(msg){
 				console.log(msg);
 			}
 			var success = function(position){
-				return ([position.coords.latitude, position.coords.longitude]);
+				console.log(typeof callback);
+				callback([position.coords.latitude, position.coords.longitude]);
 			}
 			if (navigator.geolocation) {
 			  var location = navigator.geolocation.getCurrentPosition(success, error);
