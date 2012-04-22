@@ -3,6 +3,7 @@ var APP = function(){
 		var self = this;
 		self.accessToken;
 		self.uid;
+    self.points = [];
 		self.init(function(){
       self.getAllData(function (data) {
         jQuery('#load').hide();
@@ -40,8 +41,9 @@ var APP = function(){
           '<div class="placemark-tail"><div></div></div>',
         checkin: 
           '<div class="placemark">' +
-            '<h4>{message}</h4>' +
-          '</div>',
+            '<h4>{name}</h4>' +
+          '</div>' +
+          '<div class="placemark-tail"><div></div></div>',
         me: '<img src="http://graph.facebook.com/{id}/picture">'
       }
 		},
@@ -92,8 +94,7 @@ var APP = function(){
         if (++callbackCounter === 2) callback(allData);
 			});
 			new CheckiList(function (data) {
-        console.log(data);
-        data.checkins = data;
+        allData.checkins = data;
         if (++callbackCounter === 2) callback(allData);
       });
     },
@@ -138,6 +139,27 @@ var APP = function(){
         .find('p');
       return description;
     },
+    checkPoint: function (point) {
+      var self = this,
+        saved,
+        key,
+        diff;
+      if (!point.latitude || !point.longitude) {
+        return false;
+      }
+      for (key = 0; key < self.points.length; key++) {
+        saved = self.points[key];
+        console.log(saved);
+        diff = Math.pow(saved.latitude - point.latitude, 2) +
+          Math.pow(saved.longitude - point.longitude, 2);
+        console.log(diff);
+        if (diff < 0.0000004) {
+          return false;
+        }
+      }
+      self.points.push(point);
+      return true;
+    },
     showBestOnMap: function (data) {
       var self = this,
         placemark,
@@ -150,16 +172,26 @@ var APP = function(){
         event.friends = event.users.map(function (id) {
           return self.template('user', {id: id});
         }).join('');
-        //console.log(event)
         placemark = self.template('placemark', event);
         balloon = self.template('balloon', event);
+        if (!self.checkPoint(event.venue)) {
+          return;
+        }
         Map.placemark(event.venue, placemark, balloon);
       });
-      //data.checkins.forEach(function (checkin) {
-      //  placemark = self.template('checkin', checkin);
-      //  balloon = self.template('balloon', checkin);
-      //  Map.placemark(checkin.coords, placemark, balloon);
-      //});
+      console.log(data.checkins);
+      data.checkins.placesList.forEach(function (place) {
+        var coords = {
+          latitude: place.latitude,
+          longitude: place.longitude
+        };
+        if (!self.checkPoint(coords)) {
+          return;
+        }
+        placemark = self.template('checkin', place);
+        balloon = self.template('balloon', place);
+        Map.placemark(coords, placemark, balloon);
+      });
     }
 	}
 	var CheckiList = function(callback){
