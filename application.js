@@ -5,6 +5,7 @@ var APP = function(){
 		self.uid;
 		self.init(function(){
 			console.log(self.accessToken);
+			UsersEvents.getFriendsEvents();
 			var myCheckiList = new checkiList([-90,-180], [90,180]);
 			//FB.api(
 			//	{
